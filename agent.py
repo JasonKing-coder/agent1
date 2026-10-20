@@ -18,29 +18,37 @@ def transcribe_file(file_path):
     return transcript.text
 
 def generate_content_package(transcript_text):
-    print("--- Generating Professional Content Package ---")
-    
-    # Define the different types of content we want to generate
-    prompts = {
-        "blog": "You are a professional content creator. Turn this transcription into a high-quality, SEO-optimized blog post. Use Markdown, include a catchy title, subheadings, and a concluding summary. Make it engaging and ready for publication.",
-        "newsletter": "You are a newsletter editor. Summarize this transcription into a concise, punchy newsletter. Include a 'Key Takeaways' section and a 'Call to Action'.",
-        "social_media": "You are a social media manager. Create two pieces of content from this transcription: 1) A Twitter (X) thread of 5-7 tweets. 2) A professional LinkedIn post. Format them clearly.",
-        "youtube": "You are a YouTube strategist. Create a YouTube video description, a list of 10 relevant tags, and a suggested title based on this transcription."
-    }
+    print("--- Generating Multi-Channel Content Package ---")
+    prompt = f"""
+You are a world-class content marketing agency. Your goal is to take a raw transcription and turn it into a comprehensive multi-channel content package.
 
-    results = {}
-    for content_type, prompt in prompts.items():
-        print(f"Generating {content_type}...")
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": prompt},
-                {"role": "user", "content": f"Here is the transcription: {transcript_text}"}
-            ]
-        )
-        results[content_type] = response.choices[0].message.content
+The package must include:
+1. A long-form, SEO-optimized Blog Post (Markdown).
+2. A punchy, engaging Newsletter (Email format).
+3. A set of Social Media posts:
+   - A Twitter/X thread (5-7 tweets).
+   - A professional LinkedIn post.
+   - A short, catchy Instagram caption.
+4. A YouTube script or detailed video description.
+
+Return the result strictly as a JSON object with the following keys: 
+'blog_post', 'newsletter', 'social_media' (an object with 'twitter_thread', 'linkedin_post', 'instagram_caption'), and 'youtube_script'. 
+Use Markdown for the content.
+
+Here is the transcription:
+{transcript_text}
+"""
     
-    return results
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "You are a professional content creator and ghostwriter. You output only valid JSON."},
+            {"role": "user", "content": prompt}
+        ],
+        response_format={"type": "json_object"}
+    )
+    
+    return json.loads(response.choices[0].message.content)
 
 def main():
     # Look for audio/video files in the root directory
@@ -55,31 +63,36 @@ def main():
     target_file = files[0]
     
     try:
-        # 1. Transcribe
         transcript = transcribe_file(target_file)
         print(f"Transcription complete. Length: {len(transcript)} characters.")
         
-        # 2. Generate Package
         package = generate_content_package(transcript)
         
-        # 3. Save results
-        os.makedirs("output", exist_ok=True)
+        # Create output directory
+        if not os.path.exists("output"):
+            os.makedirs("output")
         
-        with open("output/blog.md", "w", encoding="utf-8") as f:
-            f.write(package["blog"])
+        # Save each component
+        with open("output/blog_post.md", "w", encoding="utf-8") as f:
+            f.write(package['blog_post'])
+        
         with open("output/newsletter.md", "w", encoding="utf-8") as f:
-            f.write(package["newsletter"])
-        with open("output/social_media.md", "w", encoding="utf-8") as f:
-            f.write(package["social_media"])
-        with open("output/youtube.md", "w", encoding="utf-8") as f:
-            f.write(package["youtube"])
+            f.write(package['newsletter'])
+        
+        with open("output/youtube_script.md", "w", encoding="utf-8") as f:
+            f.write(package['youtube_script'])
+            
+        # Save social media posts
+        sm = package['social_media']
+        with open("output/twitter_thread.txt", "w", encoding="utf-8") as f:
+            f.write(sm['twitter_thread'])
+        with open("output/linkedin_post.txt", "w", encoding="utf-8") as f:
+            f.write(sm['linkedin_post'])
+        with open("output/instagram_caption.txt", "w", encoding="utf-8") as f:
+            f.write(sm['instagram_caption'])
         
         print("--- Success! ---")
-        print("The content package has been saved to the 'output/' directory:")
-        print("- blog.md")
-        print("- newsletter.md")
-        print("- social_media.md")
-        print("- youtube.md")
+        print("The full content package has been saved to the 'output/' directory.")
         
     except Exception as e:
         print(f"An error occurred: {e}")
