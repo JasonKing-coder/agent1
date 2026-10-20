@@ -18,32 +18,47 @@ def transcribe_file(file_path):
     return transcript.text
 
 def generate_content_package(transcript_text):
-    print("--- Generating Multi-Channel Content Package ---")
-    prompt = f"""
-You are a world-class content marketing agency. Your goal is to take a raw transcription and turn it into a comprehensive multi-channel content package.
-
-The package must include:
-1. A long-form, SEO-optimized Blog Post (Markdown).
-2. A punchy, engaging Newsletter (Email format).
-3. A set of Social Media posts:
-   - A Twitter/X thread (5-7 tweets).
-   - A professional LinkedIn post.
-   - A short, catchy Instagram caption.
-4. A YouTube script or detailed video description.
-
-Return the result strictly as a JSON object with the following keys: 
-'blog_post', 'newsletter', 'social_media' (an object with 'twitter_thread', 'linkedin_post', 'instagram_caption'), and 'youtube_script'. 
-Use Markdown for the content.
-
-Here is the transcription:
-{transcript_text}
-"""
+    print("--- Generating High-Value Content Package ---")
     
+    system_prompt = (
+        "You are an elite content marketing agency and ghostwriter. "
+        "Your goal is to transform a raw transcript into a high-conversion, "
+        "multi-channel content package that drives engagement and revenue. "
+        "You provide professional, polished, and ready-to-publish content."
+    )
+
+    user_prompt = f"""
+    Analyze the following transcript and create a complete content package.
+    
+    TRANSCRIPT:
+    {transcript_text}
+
+    REQUIRED OUTPUT FORMAT (JSON):
+    {{
+        "blog_post": {{
+            "title": "Catchy, SEO-optimized title",
+            "content": "Full long-form blog post in Markdown with H1, H2, H3 tags, and a concluding summary."
+        }},
+        "newsletter": {{
+            "subject_line": "High-open-rate subject line",
+            "body": "A concise, punchy newsletter summary designed for high engagement."
+        }},
+        "social_media": {{
+            "twitter_thread": "A 5-tweet thread summarizing the key points with hooks.",
+            "linkedin_post": "A professional, thought-leadership style post for LinkedIn."
+        }},
+        "youtube": {{
+            "script": "A structured video script with Intro, Body, and Outro.",
+            "description": "A YouTube description with timestamps, keywords, and a call to action."
+        }}
+    }}
+    """
+
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": "You are a professional content creator and ghostwriter. You output only valid JSON."},
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
         ],
         response_format={"type": "json_object"}
     )
@@ -69,35 +84,31 @@ def main():
         package = generate_content_package(transcript)
         
         # Create output directory
-        if not os.path.exists("output"):
-            os.makedirs("output")
+        output_dir = "content_package"
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+
+        # Save Blog Post
+        with open(f"{output_dir}/blog_post.md", "w", encoding="utf-8") as f:
+            f.write(f"# {package['blog_post']['title']}\n\n{package['blog_post']['content']}")
         
-        # Save each component
-        with open("output/blog_post.md", "w", encoding="utf-8") as f:
-            f.write(package['blog_post'])
+        # Save Newsletter
+        with open(f"{output_dir}/newsletter.md", "w", encoding="utf-8") as f:
+            f.write(f"Subject: {package['newsletter']['subject_line']}\n\n{package['newsletter']['body']}")
         
-        with open("output/newsletter.md", "w", encoding="utf-8") as f:
-            f.write(package['newsletter'])
+        # Save Social Media
+        with open(f"{output_dir}/social_media.md", "w", encoding="utf-8") as f:
+            f.write(f"## Twitter Thread\n{package['social_media']['twitter_thread']}\n\n## LinkedIn Post\n{package['social_media']['linkedin_post']}")
         
-        with open("output/youtube_script.md", "w", encoding="utf-8") as f:
-            f.write(package['youtube_script'])
-            
-        # Save social media posts
-        sm = package['social_media']
-        with open("output/twitter_thread.txt", "w", encoding="utf-8") as f:
-            f.write(sm['twitter_thread'])
-        with open("output/linkedin_post.txt", "w", encoding="utf-8") as f:
-            f.write(sm['linkedin_post'])
-        with open("output/instagram_caption.txt", "w", encoding="utf-8") as f:
-            f.write(sm['instagram_caption'])
+        # Save YouTube
+        with open(f"{output_dir}/youtube.md", "w", encoding="utf-8") as f:
+            f.write(f"## Script\n{package['youtube']['script']}\n\n## Description\n{package['youtube']['description']}")
         
         print("--- Success! ---")
-        print("The full content package has been saved to the 'output/' directory.")
+        print(f"The high-value content package has been saved to the '{output_dir}' directory.")
         
     except Exception as e:
         print(f"An error occurred: {e}")
-        import traceback
-        traceback.print_exc()
         sys.exit(1)
 
 if __name__ == "__main__":
