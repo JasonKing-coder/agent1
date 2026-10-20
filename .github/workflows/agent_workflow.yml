@@ -1,0 +1,12 @@
+name: Agent Workflow
+on: push
+jobs:
+  run-command:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Run command on workbench
+      uses: actions/runner@v2
+      with:
+        command: "echo 'Agent started' && date"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
